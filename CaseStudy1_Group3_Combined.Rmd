@@ -168,12 +168,6 @@ mergedBeerData.filtered %>% ggplot(aes(x = ABV,y = IBU)) + geom_jitter() + ggtit
 ```{r message = FALSE, warning = FALSE}
 # Create a new column called 'Ale' that can be 'IPA', 'Ale', or 'Other'
 
-### TODO Working through the right regex to make sure IPA and India Pale Ale aren't 
-###    counted as both IPAs and Ales
-
-### TODO For this problem, we can filter out the 'Other' from the column since we only
-###    need to compare IPA and non-IPA ales
-
 mergedBeerData.filtered$AleStyle <- 
   ifelse(grepl("IPA", mergedBeerData.filtered$Style, fixed = TRUE),"IPA",
          ifelse(grepl("Ale", mergedBeerData.filtered$Style, fixed = TRUE),"Ale","Other"))
