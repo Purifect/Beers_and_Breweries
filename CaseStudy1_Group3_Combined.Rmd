@@ -118,8 +118,13 @@ After filtering the missing/empty values out of the merged beer dataset, there a
 ```{r}
 # Filtered Merged Data
 mergedBeerData.filtered <- mergedBeerData[!row.has.na,]
-
 nrow(mergedBeerData.filtered)
+
+mergedBeerData.ABV_filtered = mergedBeerData %>% filter(!is.na(ABV))
+nrow(mergedBeerData.ABV_filtered)
+
+mergedBeerData.IBU_filtered = mergedBeerData %>% filter(!is.na(IBU))
+nrow(mergedBeerData.IBU_filtered)
 ```
 
 ### 4.Compute the median alcohol content and international bitterness unit for each state. Plot a bar chart to compare.
@@ -128,10 +133,29 @@ The median of Alcohol By Volume (ABV) and International Bitterness Units (IBU) f
 
 From the bar charts, Maine has the highest number for both ABV (0.067 or 6.7%) and IBU (61 unit).
 ```{r message = FALSE, warning = FALSE}
-medianData <- aggregate(mergedBeerData.filtered[, 4:5], list(mergedBeerData.filtered$State), median)
+# All rows NA filtered data
+medianData <- aggregate(mergedBeerData.filtered[, 4:5],
+                        list(mergedBeerData.filtered$State), median)
 names(medianData)[names(medianData)=="Group.1"] <- "State"
 
-g.mid <- ggplot(medianData,aes(x=1, y = reorder(State,ABV))) +
+# All ABV NA rows filtered
+median.ABV <- aggregate(mergedBeerData.ABV_filtered[, 4],
+                        list(mergedBeerData.ABV_filtered$State), median)
+names(median.ABV)[names(median.ABV)=="Group.1"] <- "State"
+names(median.ABV)[names(median.ABV)=="x"] <- "ABV"
+
+# All IBU NA rows filtered
+median.IBU <- aggregate(mergedBeerData.IBU_filtered[, 5],
+                        list(mergedBeerData.IBU_filtered$State), median)
+names(median.IBU)[names(median.IBU)=="Group.1"] <- "State"
+names(median.IBU)[names(median.IBU)=="x"] <- "IBU"
+
+# Merged data for ABV NA rows filtered and IBU NA rows filtered
+median.ABV.IBU_filtered <- merge(x = median.ABV, y = median.IBU,
+                                 by = "State", all = TRUE)
+median.ABV.IBU_filtered$IBU[is.na(median.ABV.IBU_filtered$IBU)] <- 0
+
+g.mid <- ggplot(median.ABV.IBU_filtered,aes(x=1, y = reorder(State,ABV))) +
   geom_text(aes(label=State)) +
   geom_segment(aes(x=0.94,xend=0.96,yend=State)) +
   geom_segment(aes(x=1.04,xend=1.062,yend=State)) +
@@ -147,7 +171,7 @@ g.mid <- ggplot(medianData,aes(x=1, y = reorder(State,ABV))) +
         axis.ticks.x=element_line(color=NA),
         plot.margin = unit(c(1,-1,1,-1), "mm"))
 
-g1 <- ggplot(data = medianData, aes(x = reorder(State,ABV), y = ABV, label = ABV)) +
+g1 <- ggplot(data = median.ABV.IBU_filtered, aes(x = reorder(State,ABV), y = ABV, label = ABV)) +
   geom_bar(stat = "identity", fill = "sandybrown") + 
   ggtitle("Alcohol By Volume (ABV)") +
   geom_text(aes(y = ABV+0.004), 
@@ -166,11 +190,11 @@ g1 <- ggplot(data = medianData, aes(x = reorder(State,ABV), y = ABV, label = ABV
   scale_y_reverse() +
   coord_flip(ylim = c(0.075,0.03))
 
-g2 <- ggplot(data = medianData, aes(x = reorder(State,ABV), y = IBU, fill = IBU, label = IBU)) +
+g2 <- ggplot(data = median.ABV.IBU_filtered, aes(x = reorder(State,ABV), y = IBU, fill = IBU, label=ifelse(IBU < 1, "NA", IBU))) +
   xlab(NULL) +
-  geom_bar(stat = "identity") + 
+  geom_bar(stat = "identity") +
   ggtitle("International Bitterness Units (IBU)") +
-  geom_text(aes(y = IBU+3),
+  geom_text(aes(y = IBU+4),
             size = 3,
             vjust = .5) +
   scale_fill_gradient2(low = "grey25", 
@@ -185,7 +209,7 @@ g2 <- ggplot(data = medianData, aes(x = reorder(State,ABV), y = IBU, fill = IBU,
         axis.ticks.y = element_blank(),
         legend.position = "none",
         plot.margin = unit(c(1,5,1,0), "mm")) +
-  coord_flip(ylim = c(5,65))
+  coord_flip(ylim = c(0,65))
 
 gg1 <- ggplot_gtable(ggplot_build(g1))
 gg2 <- ggplot_gtable(ggplot_build(g2))
@@ -196,57 +220,95 @@ grid.arrange(gg1,gg.mid,gg2,ncol=3,widths=c(4/9,1/9,4/9))
 
 Combined the two bar charts together with radial stacked bar chart.
 ```{r}
-medianData %>%
+median.ABV.IBU_filtered %>%
   ggplot(aes(x = reorder(State,ABV))) +
   geom_col(aes(y = ABV*1000, fill = ABV*100)) +
   scale_fill_gradient2(low = "white", 
                        high = "orange",
-                       name = "ABV") +
+                       name = "Median ABV") +
   geom_text(aes(y = ABV*1000-8, label = round(ABV*100, 3)), color = "chocolate4", size = 3) +
   new_scale_fill() +
   geom_col(aes(y = -IBU, fill = IBU)) +
   scale_fill_gradient2(low = "grey25", 
                        high = "black",
-                       name = "IBU") +
-  geom_text(aes(y = -6, label = round(IBU, 3)), color = "white", size = 3) +
+                       name = "Median IBU") +
+  geom_text(aes(y = -6, label = round(IBU, 0)), color = "white", size = 3) +
   geom_text(aes(y = ABV*1000+10, label = State)) + 
   scale_y_continuous(limits = c(-70, 80)) +
   coord_polar() +
   theme_void() +
   labs(title = "Median of Alcohol By Volume (ABV) and\nInternational Bitterness Units (IBU) for Each State",
-       subtitle = "   * The bar chart ordered clockwise by ABV value\n   ** The darker color represents higher value of ABV and IBU")
-
+       subtitle = "   * The bar chart ordered clockwise by median ABV value\n   ** The darker color represents higher value of median ABV and IBU")
 ```
 
 ### 5. Which state has the maximum alcoholic (ABV) beer? Which state has the most bitter (IBU) beer?
 
-When consider the median value of ABV and IBU, Maine has the highest number for both ABV (0.067 or 6.7%) and IBU (61 unit).
+On average:
+- Colorado and Kentucky has the most alcoholic (6.25%) 
+- Maine has the most bitter beer (61 IBU)
 ```{r}
 # arrange by ABV in descending order, print state for first observation
-orderedABVmedian <- medianData %>% arrange(desc(ABV))
-orderedABVmedian[1,]$State
+# arrange by ABV in descending order, print state for first observation
+median.ABV.IBU_filtered$ABV.rank <- dense_rank(-median.ABV.IBU_filtered$ABV)
+with(median.ABV.IBU_filtered,
+     median.ABV.IBU_filtered$State[median.ABV.IBU_filtered$ABV.rank == 1])
 
-orderedIBUmedian <- medianData %>% arrange(desc(IBU))
-orderedIBUmedian[1,]$State
+median.ABV.IBU_filtered$IBU.rank <- dense_rank(-median.ABV.IBU_filtered$IBU)
+with(median.ABV.IBU_filtered,
+     median.ABV.IBU_filtered$State[median.ABV.IBU_filtered$IBU.rank == 1])
 ```
-But when consider individual beer, 
 
-- Kentucky has the highest number for ABV which is 0.125 or 12.5% from London Valling Beer and 
-- Oregon has the highest value for IBU which is 138 unit from Bitter Bitch Imperial IPA.
+By individual beers:
+- Colorado has the highest ABV beer at 12.8%, Lee Hill Series Vol. 5
+by Upslope Brewing Company
+- Oregon has the most bitter beer at an IBU of 138, Bitter B**** Imperial IPA 
+by Astoria Brewing Company
 ```{r}
 # arrange by ABV in descending order, print state for first observation
-orderedABV <- mergedBeerData.filtered %>% arrange(desc(ABV))
-orderedABV[1,]
+mergedBeerData$ABV.rank <- dense_rank(-mergedBeerData$ABV)
+filter(mergedBeerData,ABV.rank == 1)
 
-orderedIBU <- mergedBeerData.filtered %>% arrange(desc(IBU))
-orderedIBU[1,]
+mergedBeerData$IBU.rank <- dense_rank(-mergedBeerData$IBU)
+filter(mergedBeerData,IBU.rank == 1)
 ```
 
 ### 6. Comment on the summary statistics and distribution of the ABV variable.
 
-- The range of ABV’s is from a minimum of 2.7% to a maximum of 12.5%
-- The average ABV is 6% with a standard deviation of 1.3%
+- The range of ABV’s is from a minimum of 0.1% to a maximum of 12.8%
+- The average ABV is 6% with a standard deviation of 1.4%
 ```{r}
+mergedBeerData.ABV_filtered %>%
+    summarize(mean=mean(ABV), 
+              sd=sd(ABV), 
+              median=median(ABV), 
+              range=max(ABV)-min(ABV), 
+              min(ABV), 
+              max(ABV), 
+              IQR=IQR(ABV))
+
+mergedBeerData.ABV_filtered %>% 
+  ggplot(aes(x=ABV)) + 
+  geom_histogram(binwidth = 0.004, color = "black", fill = "darkorange2") +
+  labs(title = "Alcohol by Volume (ABV)")
+```
+
+- The range of IBU’s is from a minimum of 4 to a maximum of 138 unit
+- The average IBU is 43 unit with a standard deviation of 26
+```{r}
+mergedBeerData.IBU_filtered %>%
+    summarize(mean=mean(IBU), 
+              sd=sd(IBU), 
+              median=median(IBU), 
+              range=max(IBU)-min(IBU), 
+              min(IBU), 
+              max(IBU), 
+              IQR=IQR(IBU))
+
+mergedBeerData.IBU_filtered %>% 
+  ggplot(aes(x=IBU)) + 
+  geom_histogram(binwidth = 5, color = "black", fill = "darkorange2") +
+  labs(title = "International Bitterness Units (IBU)")
+
 mergedBeerData.filtered %>%
     summarize(mean=mean(ABV), 
               sd=sd(ABV), 
@@ -339,24 +401,26 @@ CM.allType
 
 ### 9. More useful information: Median IBU by State
 ```{r}
-breweryDataOrig = as.data.frame(breweryDataOrig)
-Median.in.each.state = medianData
-names(Median.in.each.state)[1] <- "state"
-Median.in.each.state$state <-
-  str_replace_all(string=Median.in.each.state$state, 
+median.ABV.IBU_filtered = as.data.frame(median.ABV.IBU_filtered)
+
+names(median.ABV.IBU_filtered)[1] <- "state"
+median.ABV.IBU_filtered$state <-
+  str_replace_all(string=median.ABV.IBU_filtered$state, 
                   pattern=" ", repl="")
+
 centroid_labels <- 
   utils::read.csv(system.file("extdata",
                               paste0("us_", "states", "_centroids.csv"), 
                               package = "usmap"), stringsAsFactors = FALSE)
+
 labels <- 
   merge(x = centroid_labels, 
-        y = Median.in.each.state, 
+        y = median.ABV.IBU_filtered, 
         by.x = "abbr", 
         by.y = "state", 
         all.x=TRUE)
-names(labels)[6] <- "breweries_count"
-plot_usmap(data = Median.in.each.state, values = "IBU", labels=FALSE) + 
+
+plot_usmap(data = median.ABV.IBU_filtered, values = "IBU", labels=FALSE) + 
   scale_fill_continuous(low = "white", 
                         high = "darkgreen", 
                         name = "Mean IBU", 
@@ -365,7 +429,7 @@ plot_usmap(data = Median.in.each.state, values = "IBU", labels=FALSE) +
   theme(panel.background = element_rect(colour = "black")) + 
   labs(title = "Median IBU by State")
 
-````
+```
 
 Observation: There is a popular style of beer called a "West Coast IPA", but the West Coast does not have more bitter beer than other regions on average.
 
@@ -373,24 +437,7 @@ Observation: There is a popular style of beer called a "West Coast IPA", but the
 
 ### 9. More useful information: Median ABV by State
 ```{r}
-breweryDataOrig = as.data.frame(breweryDataOrig)
-Median.in.each.state = medianData
-names(Median.in.each.state)[1] <- "state"
-Median.in.each.state$state <-
-  str_replace_all(string=Median.in.each.state$state, 
-                  pattern=" ", repl="")
-centroid_labels <- 
-  utils::read.csv(system.file("extdata",
-                              paste0("us_", "states", "_centroids.csv"), 
-                              package = "usmap"), stringsAsFactors = FALSE)
-labels <- 
-  merge(x = centroid_labels, 
-        y = Median.in.each.state, 
-        by.x = "abbr", 
-        by.y = "state", 
-        all.x=TRUE)
-names(labels)[6] <- "breweries_count"
-plot_usmap(data = Median.in.each.state, values = "ABV", labels=FALSE) + 
+plot_usmap(data = median.ABV.IBU_filtered, values = "ABV", labels=FALSE) + 
   scale_fill_continuous(low = "white", 
                         high = "darkblue", 
                         name = "Mean ABV", 
@@ -398,8 +445,59 @@ plot_usmap(data = Median.in.each.state, values = "ABV", labels=FALSE) +
   theme(legend.position = "right") + 
   theme(panel.background = element_rect(colour = "black")) + 
   labs(title = "Median ABV by State")
-````
+```
 
 Observation: Utah and Arkansas had laws until 2020 limiting the alcohol content of beer.
 
 
+
+### 9. More useful information: Beer Size (Ounces) by State
+
+There are 9 states that the biggest beer container size is only 12 ounces
+- Alaska
+- Alabama
+- Arkansas
+- DC
+- Georgia
+- North Dakota
+- South Dakota
+- Tennessee
+- West Virginia
+
+It might be a good opportunity for Budweiser to launch a bigger size product in these states.
+```{r}
+max.size <- aggregate(mergedBeerData[, 7],
+                      list(mergedBeerData$State), max)
+names(max.size)[names(max.size)=="Group.1"] <- "state"
+names(max.size)[names(max.size)=="x"] <- "max.Ounces"
+
+max.size$max.bin = cut(max.size$max.Ounces, 
+                       breaks = c(0,11,12,16,32), 
+                       labels = c("< 12 Ounces","12 Ounces","16 Ounce", ">16 Ounce"))
+
+filter(max.size,max.bin == "12 Ounces")
+
+max.size$state <-
+  str_replace_all(string=max.size$state, 
+                  pattern=" ", repl="")
+
+centroid_labels <- 
+  utils::read.csv(system.file("extdata",
+                              paste0("us_", "states", "_centroids.csv"), 
+                              package = "usmap"), stringsAsFactors = FALSE)
+
+labels <- 
+  merge(x = centroid_labels, 
+        y = max.size, 
+        by.x = "abbr", 
+        by.y = "state", 
+        all.x=TRUE)
+
+plot_usmap(data = max.size, values = "max.bin", labels=TRUE) + 
+  scale_fill_manual(values = c("white", "skyblue1", "skyblue4"), 
+                    name = "Max Container Size") +
+  theme(legend.position = "right") + 
+  theme(panel.background = element_rect(colour = "black"),
+        legend.text = element_text(size = 10)) + 
+  labs(title = "Maximum Beer Container Size by State")
+```
