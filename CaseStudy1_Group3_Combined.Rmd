@@ -1,13 +1,17 @@
 ---
-title: "Case Study 1 by Group 3"
-author: "Group 3 Data Junkies - Chris Roche, Puri Rudick, and Ryan Kinney"
+title: "Case Study 1 by Data Junkies"
+author: "Team Data Junkies - Chris Roche, Puri Rudick, and Ryan Kinney"
 output:
   html_document: default
   pdf_document: default
 editor_options:
   chunk_output_type: console
 ---
+The study of beers and breweries in the United States was conducted using over 2000 beers from more than 500 breweries.
 
+Some of the focuses of this exploratory data analysis were placed on International Bitterness Units (IBU), Alcohol by volume (ABV), and regional differences with respect to states.
+
+This analysis is useful for Budweiser future business decision.
 ```{r setup, include=FALSE}
 library(dplyr)
 library(ggplot2)
