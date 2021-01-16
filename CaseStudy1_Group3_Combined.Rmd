@@ -423,7 +423,7 @@ labels <-
 plot_usmap(data = median.ABV.IBU_filtered, values = "IBU", labels=FALSE) + 
   scale_fill_continuous(low = "white", 
                         high = "darkgreen", 
-                        name = "Mean IBU", 
+                        name = "Median IBU", 
                         label = scales::comma) + 
   theme(legend.position = "right") + 
   theme(panel.background = element_rect(colour = "black")) + 
@@ -440,7 +440,7 @@ Observation: There is a popular style of beer called a "West Coast IPA", but the
 plot_usmap(data = median.ABV.IBU_filtered, values = "ABV", labels=FALSE) + 
   scale_fill_continuous(low = "white", 
                         high = "darkblue", 
-                        name = "Mean ABV", 
+                        name = "Median ABV", 
                         label = scales::comma) + 
   theme(legend.position = "right") + 
   theme(panel.background = element_rect(colour = "black")) + 
